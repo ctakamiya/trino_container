@@ -1,0 +1,118 @@
+services:
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "5778:5778"
+      - "6831:6831/udp"
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # Expose OTLP
+      - "14268:14268"
+      - "14250:14250"
+      - "9411:9411"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - SPAN_STORAGE_TYPE=badger  # Set storage type to Badger
+      - BADGER_EPHEMERAL=false      # Set Badger to use persistent storage
+      - BADGER_DIRECTORY_VALUE=/badger/data  # Directory for value data
+      - BADGER_DIRECTORY_KEY=/badger/key    # Directory for key data
+    volumes:
+      - ./jaeger-data:/badger
+    container_name: jaeger
+  
+  mysql_listener:
+    image: mysql
+    hostname: mysqllistener
+    environment:
+      MYSQL_ROOT_PASSWORD: 123
+      MYSQL_DATABASE: trino_events
+      MYSQL_USER: trino_listener
+      MYSQL_PASSWORD: event_listener      
+    ports:
+      - "3306:3306"
+    command: --bind-address=0.0.0.0
+    volumes:
+      - ./mysql-init.sql:/docker-entrypoint-initdb.d/mysql-init.sql
+      - ./mysql_listener_data:/var/lib/mysql
+    container_name: mysqllistener
+    
+  coordinator:
+    image: trinodb/trino:latest
+    hostname: coordinator
+    environment:
+      - TRINO_NODE_TYPE=coordinator
+      - DISCOVERY_URI=http://coordinator:8080
+      - TRACING_ENABLED=true
+      - TRACING_EXPORTER_ENDPOINT=http://jaeger:4317 
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./trino/trino:/etc/trino 
+      - ./trino-logs:/var/log/trino      
+      - ./var:/var
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - mysql_listener
+    container_name: coordinator
+
+   
+
+  worker:
+    image: trinodb/trino:latest
+    hostname: worker
+    environment:
+      - TRINO_NODE_TYPE=worker
+      - DISCOVERY_URI=http://coordinator:8080
+    volumes:
+      - ./trino_worker/trino:/etc/trino
+      - ./trino-logs1:/var/log/trino   
+      - ./var1:/var   
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - mysql_listener
+      - jaeger
+    container_name: worker1
+
+ 
+    
+
+  mysql:
+    image: mysql
+    hostname: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123
+      MYSQL_DATABASE: northwind
+      MYSQL_USER: databricks
+      MYSQL_PASSWORD: databricks   
+      MYSQL_TCP_PORT: 3307 
+    ports:
+      - "3307:3307"
+    command: --bind-address=0.0.0.0
+    volumes:
+      - ./mysql-init2.sql:/docker-entrypoint-initdb.d/mysql-init2.sql
+      - ./mysql_data:/var/lib/mysql
+    container_name: mysql
+  
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Ur@sh1ma1978
+    ports:
+      - "1433:1433"
+    volumes:
+      - ./sqlserver_data:/var/opt/mssql
+      - ./dataset_sqlserver:/initdb
+    container_name: sqlserver
+    
+
+volumes:
+  sqlserver_data:
+  mysql_listener_data:
+  mysql_data:
+  jaeger-data:
+
+
