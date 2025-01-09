@@ -1,7 +1,7 @@
 
 # Intructions
 
-To build the environment run the command:
+To build the environment, run the command:
 
 ```
 $ docker compose up -d
@@ -10,6 +10,8 @@ $ docker compose up -d
 
 # Creating Database Northwind
 
+To create the Northwind, run the following command:
+
 ```
 $ docker exec -it sqlserver  /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Ur@sh1ma1978 -d master -C -i /initdb/instnwnd.sql
 
@@ -17,13 +19,17 @@ $ docker exec -it sqlserver  /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P
 
 # Run Trino Terminal
 
+To run the Trino terminal, use the command:
+
 ```
 $ docker exec -it coordinator trino
 
 ```
 
 # Trino UI
-Go to -> http://localhost:8080
+To access the Trino UI, go to:
+http://localhost:8080
 
 # Jaeger UI
-Go to -> http://localhost:16686
+To access the Jaeger UI, go to:
+http://localhost:16686
